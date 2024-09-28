@@ -1,6 +1,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include <limits>  // For std::numeric_limits
+#include <limits>
 
 class ScanDataPrinter : public rclcpp::Node
 {

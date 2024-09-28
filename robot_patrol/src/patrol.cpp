@@ -2,6 +2,7 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #define M_PI 3.14159265358979323846
+
 class Patrol : public rclcpp::Node
 {
 public:
