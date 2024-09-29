@@ -11,16 +11,12 @@ def generate_launch_description():
         'turtlebot3_burger.urdf'
     )
 
-    # Read the URDF file
-    with open(urdf_path, 'r') as infp:
-        robot_desc = infp.read()
-
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
         name='robot_state_publisher',
         output='screen',
-        parameters=[{'robot_description': robot_desc}]
+        parameters=[{'robot_description': urdf_path}]
     )
 
     # Launch RViz with the configuration file
@@ -34,23 +30,15 @@ def generate_launch_description():
         output='screen'
     )
 
-    direction_service = Node(
-        package='robot_patrol',
-        executable='direction_service',
-        name='direction_service',
-        output='screen'
-    )
-
     patrol_node = Node(
         package='robot_patrol',
-        executable='patrol_with_service',
-        name='patrol_with_service',
+        executable='patrol',
+        name='patrol_node',
         output='screen'
     )
 
     return LaunchDescription([
         robot_state_publisher_node,
         rviz_node,
-        direction_service,
         patrol_node
     ])
