@@ -30,15 +30,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    patrol_node = Node(
-        package='robot_patrol',
-        executable='patrol',
-        name='patrol_node',
-        output='screen'
-    )
-
     return LaunchDescription([
         robot_state_publisher_node,
         rviz_node,
-        patrol_node
     ])

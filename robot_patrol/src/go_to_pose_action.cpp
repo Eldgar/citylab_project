@@ -15,7 +15,6 @@ public:
 
     GoToPose() : Node("go_to_pose_action")
     {
-        // Create the action server
         action_server_ = rclcpp_action::create_server<GoToPoseAction>(
             this,
             "/go_to_pose",
@@ -43,9 +42,12 @@ private:
     rclcpp_action::GoalResponse handle_goal(const rclcpp_action::GoalUUID &uuid,
                                             std::shared_ptr<const GoToPoseAction::Goal> goal)
     {
-        RCLCPP_INFO(this->get_logger(), "Received goal request for position: (%f, %f, %f)", 
-                    goal->goal_pos.x, goal->goal_pos.y, goal->goal_pos.theta);
+        // Convert theta from degrees to radians
+        double theta_radians = goal->goal_pos.theta * (M_PI / 180.0);
         desired_pos_ = goal->goal_pos;
+        desired_pos_.theta = theta_radians; // Store converted theta
+        RCLCPP_INFO(this->get_logger(), "Received goal request: Position (%f, %f), Orientation (theta = %f radians)", 
+                    desired_pos_.x, desired_pos_.y, desired_pos_.theta);
         return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
 
@@ -82,7 +84,7 @@ private:
     // Execution of the goal
     void execute(const std::shared_ptr<GoalHandleGoToPose> goal_handle)
     {
-        rclcpp::Rate rate(10);  // Control loop runs at 10 Hz
+        rclcpp::Rate rate(20);
         bool reached_goal = false;
 
         while (rclcpp::ok() && !reached_goal)
@@ -94,32 +96,66 @@ private:
             double goal_angle = atan2(dy, dx);
             double angle_diff = goal_angle - current_pos_.theta;
 
-            // Feedback
+            // Publish feedback
             auto feedback = std::make_shared<GoToPoseAction::Feedback>();
             feedback->current_pos = current_pos_;
             goal_handle->publish_feedback(feedback);
 
-            if (distance < 0.05 && fabs(angle_diff) < 0.05)  // Goal tolerance
+            if (distance < 0.04)
             {
                 reached_goal = true;
-                RCLCPP_INFO(this->get_logger(), "Goal reached");
-                break;
+                RCLCPP_INFO(this->get_logger(), "Position goal reached");
+
+                geometry_msgs::msg::Twist stop_cmd;
+                stop_cmd.linear.x = 0.0;
+                stop_cmd.angular.z = 0.0;
+                velocity_publisher_->publish(stop_cmd);
+
+                // Now rotate to reach the desired theta
+                rotate_to_goal_theta();
+
+                // Mark the goal as succeeded
+                auto result = std::make_shared<GoToPoseAction::Result>();
+                result->status = true;
+                goal_handle->succeed(result);
+                RCLCPP_INFO(this->get_logger(), "Goal execution completed");
+                return;
             }
 
-            // Create velocity command
             geometry_msgs::msg::Twist cmd_vel;
             cmd_vel.linear.x = 0.2;
-            cmd_vel.angular.z = angle_diff;
+            cmd_vel.angular.z = angle_diff * 1.5;
             velocity_publisher_->publish(cmd_vel);
 
             rate.sleep();
         }
+    }
 
-        // Goal result
-        auto result = std::make_shared<GoToPoseAction::Result>();
-        result->status = true;
-        goal_handle->succeed(result);
-        RCLCPP_INFO(this->get_logger(), "Goal execution completed");
+    void rotate_to_goal_theta()
+    {
+        rclcpp::Rate rate(20); // Control loop at 20 Hz
+        bool rotation_done = false;
+        
+        while (rclcpp::ok() && !rotation_done)
+        {
+            double angle_diff = desired_pos_.theta - current_pos_.theta;
+            if (fabs(angle_diff) < 0.02) 
+            {
+                rotation_done = true;
+                geometry_msgs::msg::Twist stop_cmd;
+                stop_cmd.angular.z = 0.0;
+                velocity_publisher_->publish(stop_cmd);
+                RCLCPP_INFO(this->get_logger(), "Orientation goal reached, stopping");
+            }
+            else
+            {
+                geometry_msgs::msg::Twist rotate_cmd;
+                rotate_cmd.angular.z = angle_diff * 1.5;
+                velocity_publisher_->publish(rotate_cmd);
+            }
+
+            rate.sleep();
+        }
     }
 };
 
@@ -131,4 +167,6 @@ int main(int argc, char **argv)
     rclcpp::shutdown();
     return 0;
 }
+
+
 

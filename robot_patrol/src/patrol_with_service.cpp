@@ -23,7 +23,7 @@ private:
 
     void laser_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
-        RCLCPP_INFO(this->get_logger(), "Laser callback called. Received %zu ranges.", msg->ranges.size());
+        //RCLCPP_INFO(this->get_logger(), "Laser callback called. Received %zu ranges.", msg->ranges.size());
 
         if (!client_->service_is_ready())
         {
@@ -43,7 +43,7 @@ private:
     void response_callback(rclcpp::Client<robot_patrol::srv::GetDirection>::SharedFuture future)
     {
         auto response = future.get();
-        RCLCPP_INFO(this->get_logger(), "Received response from service: %s", response->direction.c_str());
+        //RCLCPP_INFO(this->get_logger(), "Received response from service: %s", response->direction.c_str());
 
         auto twist_msg = geometry_msgs::msg::Twist();
 
@@ -70,8 +70,8 @@ private:
         }
 
         velocity_publisher_->publish(twist_msg);
-        RCLCPP_INFO(this->get_logger(), "Published Twist message: linear.x = %f, angular.z = %f",
-                    twist_msg.linear.x, twist_msg.angular.z);
+        //RCLCPP_INFO(this->get_logger(), "Published Twist message: linear.x = %f, angular.z = %f",
+                    //twist_msg.linear.x, twist_msg.angular.z);
     }
 };
 
