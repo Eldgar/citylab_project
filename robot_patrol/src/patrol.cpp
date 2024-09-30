@@ -2,7 +2,6 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #define M_PI 3.14159265358979323846
-
 class Patrol : public rclcpp::Node
 {
 public:
@@ -32,9 +31,18 @@ private:
         int end_idx = 3 * (msg->ranges.size() / 4);
         int front_idx = msg->ranges.size() / 2;
         int safest_idx = msg->ranges.size() / 2;
-        float front_distance = msg->ranges[front_idx];
         float max_distance = 0.0;
-
+        float front_distance = std::numeric_limits<float>::max();
+        for (int i = front_idx - 35; i <= front_idx + 35; i++)
+        {
+            if (i >= 0 && i < static_cast<int>(msg->ranges.size()))
+            {
+                if (std::isfinite(msg->ranges[i]) && msg->ranges[i] < front_distance)
+                {
+                    front_distance = msg->ranges[i];
+                }
+            }
+        }
 
         if (front_distance < 0.35)
         {
@@ -48,9 +56,8 @@ private:
             }
             RCLCPP_INFO(this->get_logger(), "Index:  %d", safest_idx);
             direction_ = (static_cast<double>(safest_idx) - (static_cast<double>(msg->ranges.size()) / 2.0)) * M_PI / (static_cast<double>(msg->ranges.size()) / 2.0);
-
-            RCLCPP_INFO(this->get_logger(), "Index Difference:  %d", (safest_idx - 330));
-            RCLCPP_INFO(this->get_logger(), "Direction:  %f", direction_);
+            //RCLCPP_INFO(this->get_logger(), "Index Difference:  %d", (safest_idx - 330));
+            RCLCPP_INFO(this->get_logger(), "Turning rad/s:  %f", direction_);
         }
         else
         {
@@ -64,24 +71,20 @@ private:
 
         twist_msg.linear.x = 0.1;
 
-        // Inside your control loop or appropriate function
         if (direction_ > 2.0 || direction_ < -2.0)
         {
-            // Log the error if direction is out of range
             RCLCPP_ERROR(this->get_logger(), "Direction value %f is out of bounds! It should be between -2 and 2.", direction_);
 
-            // Optionally, you can stop the robot or take corrective action
-            twist_msg.angular.z = 0.0;  // Set angular velocity to 0 to stop turning
-            twist_msg.linear.x = 0.0;   // Optionally stop linear motion as well
+            twist_msg.angular.z = 0.0; 
+            twist_msg.linear.x = 0.0;
 
-            // Publish the twist message to stop the robot
             velocity_publisher_->publish(twist_msg);
 
-            return;  // Return or handle the situation as needed
+            return; 
         }
         else
         {
-            // If direction is within bounds, proceed with normal motion
+
             if (direction_ != 0.0)
             {
                 twist_msg.angular.z = direction_ / 2.0;

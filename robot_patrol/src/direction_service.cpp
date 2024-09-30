@@ -19,53 +19,36 @@ private:
     void handle_service(const std::shared_ptr<robot_patrol::srv::GetDirection::Request> request,
                         std::shared_ptr<robot_patrol::srv::GetDirection::Response> response)
     {
-        // Index-based calculations
+        RCLCPP_INFO(this->get_logger(), "Service Server Request");
         int start_idx = request->laser_data.ranges.size() / 4;
         int end_idx = 3 * (request->laser_data.ranges.size() / 4);
         size_t section_size = (end_idx - start_idx) / 3;
 
-        // Weight function to apply different weights based on range values
         auto weight_func = [](float range) -> float {
             if (range < 0.17f) return range * 0.001f;
-            if (range < 0.24f) return range * 0.05f;
-            if (range < 1.5f) return range * 4.0f;
-            if (range < 1.0f) return range * 1.5f;
-            return range; // Default weight if no threshold is met
+            if (range < 0.3f) return range * 0.05f;
+            if (range < 1.5f) return range * 1.7f;
+            if (range < 1.0f) return range * 1.1f;
+            return range; 
         };
 
-        // Right section (apply weights)
         float total_dist_right = std::accumulate(
             request->laser_data.ranges.begin() + start_idx, 
             request->laser_data.ranges.begin() + start_idx + section_size, 
             0.0f, 
             [weight_func](float sum, float range) {
-                return sum + weight_func(range); // Apply weight to each range reading
+                return sum + weight_func(range); 
             });
 
-        // Front section (apply weights)
-        float total_dist_front = std::accumulate(
-            request->laser_data.ranges.begin() + start_idx + section_size, 
-            request->laser_data.ranges.begin() + start_idx + 2 * section_size, 
-            0.0f, 
-            [weight_func](float sum, float range) {
-                return sum + weight_func(range); // Apply weight to each range reading
-            });
-
-        // Left section (apply weights)
         float total_dist_left = std::accumulate(
             request->laser_data.ranges.begin() + start_idx + 2 * section_size, 
             request->laser_data.ranges.begin() + end_idx, 
             0.0f, 
             [weight_func](float sum, float range) {
-                return sum + weight_func(range); // Apply weight to each range reading
+                return sum + weight_func(range);
             });
 
-        // Decision based on the total distances
-        if (total_dist_front > total_dist_right && total_dist_front > total_dist_left)
-        {
-            response->direction = "forward";
-        }
-        else if (total_dist_left > total_dist_right)
+        if (total_dist_left > total_dist_right)
         {
             response->direction = "left";
         }
@@ -73,6 +56,7 @@ private:
         {
             response->direction = "right";
         }
+        RCLCPP_INFO(this->get_logger(), "Service Response: %s", response->direction.c_str());
     }
 };
 

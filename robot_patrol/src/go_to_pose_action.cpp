@@ -111,10 +111,8 @@ private:
                 stop_cmd.angular.z = 0.0;
                 velocity_publisher_->publish(stop_cmd);
 
-                // Now rotate to reach the desired theta
                 rotate_to_goal_theta();
 
-                // Mark the goal as succeeded
                 auto result = std::make_shared<GoToPoseAction::Result>();
                 result->status = true;
                 goal_handle->succeed(result);
@@ -133,7 +131,7 @@ private:
 
     void rotate_to_goal_theta()
     {
-        rclcpp::Rate rate(20); // Control loop at 20 Hz
+        rclcpp::Rate rate(20);
         bool rotation_done = false;
         
         while (rclcpp::ok() && !rotation_done)
